@@ -1,170 +1,162 @@
--- Nexon UI Library (Stylized)
-local Nexon = {}
+
+-- NexonV2UI Library (Vexel-style UI)
+local NexonV2 = {}
 local TweenService = game:GetService("TweenService")
-local StarterGui = game:GetService("StarterGui")
-local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
-local function applyStyle(ui)
-	local corner = Instance.new("UICorner", ui)
-	corner.CornerRadius = UDim.new(0, 6)
-
-	local stroke = Instance.new("UIStroke", ui)
-	stroke.Color = Color3.fromRGB(0, 255, 200)
-	stroke.Thickness = 1
-	stroke.Transparency = 0.8
+-- Utility
+local function makeUICorner(parent, rad)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, rad or 6)
+	corner.Parent = parent
 end
 
-function Nexon:CreateWindow(titleText)
-	local screenGui = Instance.new("ScreenGui")
-	screenGui.Name = "NexonUI"
-	screenGui.ResetOnSpawn = false
-	screenGui.IgnoreGuiInset = true
-	screenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+local function makeUIStroke(parent, color, thickness)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = color or Color3.fromRGB(0, 255, 200)
+	stroke.Thickness = thickness or 1
+	stroke.Parent = parent
+end
+
+function NexonV2:CreateWindow(title)
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "NexonV2UI"
+	gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 	local main = Instance.new("Frame")
 	main.Name = "Main"
-	main.Size = UDim2.new(0, 420, 0, 480)
-	main.Position = UDim2.new(0.5, -210, 0.5, -240)
+	main.Size = UDim2.new(0, 600, 0, 400)
+	main.Position = UDim2.new(0.5, -300, 0.5, -200)
 	main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 	main.BorderSizePixel = 0
+	main.Parent = gui
 	main.Active = true
 	main.Draggable = true
-	main.Parent = screenGui
-	applyStyle(main)
 
-	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, 0, 0, 45)
-	title.BackgroundColor3 = Color3.fromRGB(0, 255, 200)
-	title.Text = "🌿 Nexon | " .. (titleText or "Window")
-	title.Font = Enum.Font.GothamBlack
-	title.TextSize = 20
-	title.TextColor3 = Color3.fromRGB(10, 10, 10)
-	title.Parent = main
-	applyStyle(title)
+	makeUICorner(main, 8)
+	makeUIStroke(main, Color3.fromRGB(0, 255, 200), 1)
 
-	local container = Instance.new("ScrollingFrame")
-	container.Name = "Container"
-	container.Size = UDim2.new(1, -20, 1, -60)
-	container.Position = UDim2.new(0, 10, 0, 50)
-	container.CanvasSize = UDim2.new(0, 0, 0, 0)
-	container.ScrollBarThickness = 4
-	container.BackgroundTransparency = 1
-	container.Parent = main
+	local topBar = Instance.new("TextLabel")
+	topBar.Size = UDim2.new(1, 0, 0, 40)
+	topBar.BackgroundColor3 = Color3.fromRGB(0, 255, 200)
+	topBar.Text = "🌿 Nexon Hub | " .. (title or "Untitled")
+	topBar.Font = Enum.Font.GothamBold
+	topBar.TextSize = 18
+	topBar.TextColor3 = Color3.fromRGB(10, 10, 10)
+	topBar.Parent = main
+	makeUICorner(topBar, 6)
 
-	local layout = Instance.new("UIListLayout")
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Padding = UDim.new(0, 8)
-	layout.Parent = container
+	local leftBar = Instance.new("Frame")
+	leftBar.Size = UDim2.new(0, 150, 1, -40)
+	leftBar.Position = UDim2.new(0, 0, 0, 40)
+	leftBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	leftBar.BorderSizePixel = 0
+	leftBar.Parent = main
+	makeUICorner(leftBar, 6)
 
-	return setmetatable({
-		Container = container,
-		ScreenGui = screenGui,
-		Main = main
-	}, {
-		__index = Nexon
-	})
-end
+	local tabLayout = Instance.new("UIListLayout")
+	tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	tabLayout.Padding = UDim.new(0, 4)
+	tabLayout.Parent = leftBar
 
-function Nexon:AddButton(name, callback)
-	local button = Instance.new("TextButton")
-	button.Size = UDim2.new(1, 0, 0, 36)
-	button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-	button.TextColor3 = Color3.fromRGB(255, 255, 255)
-	button.Text = name or "Button"
-	button.Font = Enum.Font.GothamSemibold
-	button.TextSize = 14
-	button.AutoButtonColor = false
-	button.Parent = self.Container
-	applyStyle(button)
+	local contentFrame = Instance.new("Frame")
+	contentFrame.Size = UDim2.new(1, -150, 1, -40)
+	contentFrame.Position = UDim2.new(0, 150, 0, 40)
+	contentFrame.BackgroundTransparency = 1
+	contentFrame.Name = "Content"
+	contentFrame.Parent = main
 
-	button.MouseEnter:Connect(function()
-		TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 255, 200)}):Play()
-	end)
-	button.MouseLeave:Connect(function()
-		TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}):Play()
-	end)
+	local tabContentMap = {}
 
-	button.MouseButton1Click:Connect(function()
-		if callback then callback() end
-	end)
+	local function addTab(tabName)
+		local tabBtn = Instance.new("TextButton")
+		tabBtn.Size = UDim2.new(1, 0, 0, 32)
+		tabBtn.Text = tabName
+		tabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+		tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		tabBtn.Font = Enum.Font.Gotham
+		tabBtn.TextSize = 14
+		tabBtn.Parent = leftBar
+		makeUICorner(tabBtn, 4)
 
-	return button
-end
+		local tabFrame = Instance.new("ScrollingFrame")
+		tabFrame.Name = tabName
+		tabFrame.Visible = false
+		tabFrame.Size = UDim2.new(1, 0, 1, 0)
+		tabFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+		tabFrame.ScrollBarThickness = 4
+		tabFrame.Parent = contentFrame
 
-function Nexon:AddToggle(name, default, callback)
-	local toggle = Instance.new("TextButton")
-	toggle.Size = UDim2.new(1, 0, 0, 36)
-	toggle.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-	toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-	toggle.Text = "[ OFF ] " .. name
-	toggle.Font = Enum.Font.Gotham
-	toggle.TextSize = 14
-	toggle.AutoButtonColor = false
-	toggle.Parent = self.Container
-	applyStyle(toggle)
+		local layout = Instance.new("UIListLayout", tabFrame)
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Padding = UDim.new(0, 6)
 
-	local state = default or false
-	toggle.MouseButton1Click:Connect(function()
-		state = not state
-		toggle.Text = (state and "[ ON ] " or "[ OFF ] ") .. name
-		TweenService:Create(toggle, TweenInfo.new(0.15), {
-			BackgroundColor3 = state and Color3.fromRGB(0, 255, 200) or Color3.fromRGB(30, 30, 30)
-		}):Play()
-		if callback then callback(state) end
-	end)
+		tabContentMap[tabName] = tabFrame
 
-	return toggle
-end
-
-function Nexon:AddLabel(text)
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, 0, 0, 28)
-	label.BackgroundTransparency = 1
-	label.TextColor3 = Color3.fromRGB(0, 255, 200)
-	label.Text = text
-	label.Font = Enum.Font.Gotham
-	label.TextSize = 14
-	label.Parent = self.Container
-	return label
-end
-
-function Nexon:AddSlider(name, min, max, default, callback)
-	local sliderFrame = Instance.new("Frame")
-	sliderFrame.Size = UDim2.new(1, 0, 0, 42)
-	sliderFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-	sliderFrame.Parent = self.Container
-	applyStyle(sliderFrame)
-
-	local title = Instance.new("TextLabel", sliderFrame)
-	title.Size = UDim2.new(1, 0, 0.5, 0)
-	title.Text = name .. ": " .. tostring(default)
-	title.TextColor3 = Color3.fromRGB(255, 255, 255)
-	title.BackgroundTransparency = 1
-	title.Font = Enum.Font.Gotham
-	title.TextSize = 13
-
-	local slider = Instance.new("TextButton", sliderFrame)
-	slider.Position = UDim2.new(0, 0, 0.5, 0)
-	slider.Size = UDim2.new(1, 0, 0.5, 0)
-	slider.BackgroundColor3 = Color3.fromRGB(0, 255, 200)
-	slider.Text = ""
-	applyStyle(slider)
-
-	slider.MouseButton1Down:Connect(function()
-		local conn
-		conn = UserInputService.InputChanged:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseMovement then
-				local x = math.clamp((input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
-				local value = math.floor(min + (max - min) * x)
-				title.Text = name .. ": " .. tostring(value)
-				if callback then callback(value) end
-			end
+		tabBtn.MouseButton1Click:Connect(function()
+			for _, frame in pairs(tabContentMap) do frame.Visible = false end
+			tabFrame.Visible = true
 		end)
-		UserInputService.InputEnded:Wait()
-		if conn then conn:Disconnect() end
-	end)
 
-	return slider
+		return {
+			AddLabel = function(_, txt)
+				local lbl = Instance.new("TextLabel")
+				lbl.Size = UDim2.new(1, -10, 0, 28)
+				lbl.Text = txt
+				lbl.TextColor3 = Color3.fromRGB(0, 255, 200)
+				lbl.BackgroundTransparency = 1
+				lbl.Font = Enum.Font.Gotham
+				lbl.TextSize = 14
+				lbl.Parent = tabFrame
+			end,
+			AddToggle = function(_, name, desc, default, callback)
+				local holder = Instance.new("Frame")
+				holder.Size = UDim2.new(1, -10, 0, 50)
+				holder.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+				holder.Parent = tabFrame
+				makeUICorner(holder)
+
+				local title = Instance.new("TextLabel", holder)
+				title.Size = UDim2.new(1, -50, 0.6, 0)
+				title.Position = UDim2.new(0, 8, 0, 4)
+				title.BackgroundTransparency = 1
+				title.Font = Enum.Font.Gotham
+				title.TextSize = 14
+				title.TextXAlignment = Enum.TextXAlignment.Left
+				title.Text = name
+				title.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+				local descLabel = Instance.new("TextLabel", holder)
+				descLabel.Size = UDim2.new(1, -16, 0.4, 0)
+				descLabel.Position = UDim2.new(0, 8, 0.6, 0)
+				descLabel.BackgroundTransparency = 1
+				descLabel.Font = Enum.Font.Gotham
+				descLabel.TextSize = 12
+				descLabel.TextXAlignment = Enum.TextXAlignment.Left
+				descLabel.Text = desc or ""
+				descLabel.TextColor3 = Color3.fromRGB(180, 255, 240)
+
+				local toggle = Instance.new("TextButton", holder)
+				toggle.Size = UDim2.new(0, 40, 0, 22)
+				toggle.Position = UDim2.new(1, -50, 0.5, -11)
+				toggle.BackgroundColor3 = default and Color3.fromRGB(0, 255, 200) or Color3.fromRGB(80, 80, 80)
+				toggle.Text = ""
+				makeUICorner(toggle)
+
+				local state = default
+				toggle.MouseButton1Click:Connect(function()
+					state = not state
+					toggle.BackgroundColor3 = state and Color3.fromRGB(0, 255, 200) or Color3.fromRGB(80, 80, 80)
+					if callback then callback(state) end
+				end)
+			end
+		}
+	end
+
+	return {
+		AddTab = addTab
+	}
 end
 
-return Nexon
+return NexonV2
